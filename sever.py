@@ -1,4 +1,4 @@
-rom flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session
 from flask_session import Session
 import random
 
@@ -61,7 +61,7 @@ def status():
     global game_phase, night_actions, votes, night_result
     required_roles = ["wolf","seer"]
 
-    # 夜晚邏輯：只等狼或預言家操作
+    # 夜晚邏輯：只等狼人/預言家操作
     if game_phase=="night" and all(p not in alive or (players[p] not in required_roles or p in night_actions) for p in alive):
         night_result=""
         wolf_targets = [t for p,t in night_actions.items() if players[p]=="wolf"]
@@ -122,9 +122,6 @@ def chat():
     chat_messages.append(f"{name}: {msg}")
     return jsonify({"status":"ok"})
 
-# 不需要 debug，Render 用 Gunicorn 啟動
+# 不要 debug，Render 用 Gunicorn 啟動
 if __name__=="__main__":
     app.run(host="0.0.0.0")
-
-if __name__=="__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
