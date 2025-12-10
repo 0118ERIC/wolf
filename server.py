@@ -7,7 +7,6 @@ app.secret_key = "secret"
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# 遊戲資料
 players = {}
 alive = set()
 votes = {}
@@ -61,7 +60,7 @@ def status():
     global game_phase, night_actions, votes, night_result
     required_roles = ["wolf","seer"]
 
-    # 夜晚邏輯：只等狼人/預言家操作
+    # 夜晚：只等狼或預言家操作
     if game_phase=="night" and all(p not in alive or (players[p] not in required_roles or p in night_actions) for p in alive):
         night_result=""
         wolf_targets = [t for p,t in night_actions.items() if players[p]=="wolf"]
@@ -78,7 +77,7 @@ def status():
         votes={}
         game_phase="day"
 
-    # 白天邏輯
+    # 白天
     elif game_phase=="day" and len(votes)==len(alive):
         tally={}
         for v in votes.values():
@@ -122,6 +121,6 @@ def chat():
     chat_messages.append(f"{name}: {msg}")
     return jsonify({"status":"ok"})
 
-# 不要 debug，Render 用 Gunicorn 啟動
+# Render 用 Gunicorn 啟動，不需要 debug
 if __name__=="__main__":
     app.run(host="0.0.0.0")
