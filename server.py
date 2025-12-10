@@ -1,14 +1,9 @@
 from flask import Flask, render_template, request, jsonify, session
-from flask_session import Session
 import random
 import threading
 
 app = Flask(__name__)
-
-# -------------------- Session 設定 --------------------
-app.secret_key = "secret"               # 必須有
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)                            # 初始化 Flask-Session
+app.secret_key = "super-secret-key"  # 必須有
 
 # -------------------- 全局遊戲資料 --------------------
 players = {}        # 玩家名稱 -> 角色
@@ -18,7 +13,7 @@ night_actions = {}  # 夜晚操作
 game_phase = "waiting"
 chat_messages = []
 night_result = ""
-lock = threading.Lock()  # 多線程保護
+lock = threading.Lock()  # 多線程保護全局資料
 
 roles = ["wolf", "seer", "villager", "villager"]
 
@@ -82,7 +77,10 @@ def status():
         required_roles = ["wolf","seer"]
 
         # 夜晚邏輯
-        if game_phase=="night" and all(p not in alive or (players.get(p) not in required_roles or p in night_actions) for p in alive):
+        if game_phase=="night" and all(
+            p not in alive or (players.get(p) not in required_roles or p in night_actions) 
+            for p in alive
+        ):
             night_result=""
             wolf_targets = [t for p,t in night_actions.items() if players.get(p)=="wolf" and t in alive]
             if wolf_targets:
@@ -147,4 +145,4 @@ def chat():
 
 # -------------------- 啟動 --------------------
 if __name__=="__main__":
-    app.run(host="0.0.0.0")  # Render / Railway 用 Gunicorn 啟動
+    app.run(host="0.0.0.0")
