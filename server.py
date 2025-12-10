@@ -4,19 +4,21 @@ import random
 import threading
 
 app = Flask(__name__)
-app.secret_key = "secret"
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
 
-# 全局遊戲資料
-players = {}
-alive = set()
-votes = {}
-night_actions = {}
+# -------------------- Session 設定 --------------------
+app.secret_key = "secret"               # 必須有
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)                            # 初始化 Flask-Session
+
+# -------------------- 全局遊戲資料 --------------------
+players = {}        # 玩家名稱 -> 角色
+alive = set()       # 存活玩家
+votes = {}          # 白天投票
+night_actions = {}  # 夜晚操作
 game_phase = "waiting"
 chat_messages = []
 night_result = ""
-lock = threading.Lock()  # 保護多線程操作
+lock = threading.Lock()  # 多線程保護
 
 roles = ["wolf", "seer", "villager", "villager"]
 
@@ -24,7 +26,7 @@ roles = ["wolf", "seer", "villager", "villager"]
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template("index.html")  # 你的 Brython 前端
 
 @app.route('/join', methods=['POST'])
 def join():
@@ -79,7 +81,7 @@ def status():
     with lock:
         required_roles = ["wolf","seer"]
 
-        # 夜晚邏輯：只等狼或預言家操作
+        # 夜晚邏輯
         if game_phase=="night" and all(p not in alive or (players.get(p) not in required_roles or p in night_actions) for p in alive):
             night_result=""
             wolf_targets = [t for p,t in night_actions.items() if players.get(p)=="wolf" and t in alive]
@@ -144,6 +146,5 @@ def chat():
     return jsonify({"status":"ok"})
 
 # -------------------- 啟動 --------------------
-# Render / Railway 用 Gunicorn 啟動，不需要 debug
 if __name__=="__main__":
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0")  # Render / Railway 用 Gunicorn 啟動
