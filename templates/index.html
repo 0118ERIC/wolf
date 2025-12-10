@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>多人狼人殺</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.11.1/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.11.1/brython_stdlib.js"></script>
+    <style>
+        .wolf {background-color: #ff6666;}   /* 狼人可操作目標 */
+        .seer {background-color: #6699ff;}   /* 預言家可操作目標 */
+        .villager {background-color: #cccccc;} /* 村民不可操作 */
+        .dead {background-color: #999999; color: #666666;}
+        button {margin:2px; padding:5px 10px;}
+        #chat_box {border:1px solid black; height:150px; overflow:auto; padding:5px;}
+    </style>
+</head>
+<body onload="brython()">
+    <h2>多人狼人殺</h2>
+    <div id="join_area">
+        名字: <input type="text" id="name_input">
+        <button id="join_btn">加入遊戲</button>
+        <button id="start_btn">開始遊戲</button>
+    </div>
+    
+    <div id="game_area" style="display:none;">
+        <p>你的身份: <span id="identity"></span></p>
+        <p>遊戲階段: <span id="phase"></span></p>
+        <p>存活玩家: <span id="alive"></span></p>
+        <p>夜晚結果: <span id="night_result"></span></p>
+        <div id="action_area"></div>
+        
+        <h3>聊天</h3>
+        <div id="chat_box"></div>
+        <input type="text" id="chat_input">
+        <button id="chat_send">發送</button>
+    </div>
+
+    <script type="text/python">
+from browser import document, ajax, timer, html, alert
+
+def join(ev):
+    name = document['name_input'].value
+    def cb(req):
+        res = req.json
+        if res['status']=='ok':
+            document['join_area'].style.display = 'none'
+            document['game_area'].style.display = 'block'
+        else:
+            alert(res['msg'])
+    ajax.post('/join', data={'name': name}, oncomplete=cb)
+
+def start_game(ev):
+    def cb(req):
+        res = req.json
+        if res['status'] != 'ok':
+            alert(res['msg'])
+    ajax.post('/start', oncomplete=cb)
+
+def take_action(target):
+    def cb(req):
+        update_status()
+    ajax.post('/action', data={'target': target}, oncomplete=cb)
+
+def send_chat(ev):
+    msg = document['chat_input'].value
+    if msg.strip()=='':
+        return
+    def cb(req):
+        document['chat_input'].value = ''
+        update_status()
+    ajax.post('/chat', data={'msg': msg}, oncomplete=cb)
+
+def update_status():
+    def cb(req):
+        res = req.json
+        document['identity'].text = res['identity']
+        document['phase'].text = res['phase']
+        document['alive'].text = ", ".join(res['alive'])
+        document['night_result'].text = res['night_result']
+
+        # 更新聊天區並自動滾動
+        chat_div = document['chat_box']
+        chat_div.clear()
+        for msg in res['chat']:
+            chat_div <= html.DIV(msg)
+        chat_div.scrollTop = chat_div.scrollHeight
+
+        # 更新行動按鈕
+        document['action_area'].clear()
+        name = res['identity']
+        for p in res['alive']:
+            if p == document['identity'].text:
+                continue
+            btn = html.BUTTON(p)
+            # 設置按鈕顏色
+            if res['phase']=='night':
+                if name=='wolf':
+                    btn.class_name = 'wolf'
+                elif name=='seer':
+                    btn.class_name = 'seer'
+                else:
+                    btn.class_name = 'villager'
+                    btn.attrs['disabled'] = True
+            else: # 白天投票
+                btn.class_name = 'wolf' if players.get(p)=='wolf' else 'villager'
+            btn.bind('click', lambda ev, t=p: take_action(t))
+            document['action_area'] <= btn
+
+        if res['winner']:
+            alert(f"遊戲結束！{res['winner']}")
+    ajax.get('/status', oncomplete=cb)
+
+# 用來存儲玩家角色，用於按鈕顏色
+players = {}
+
+def update_players():
+    def cb(req):
+        res = req.json
+        players.clear()
+        for p in res['alive']:
+            players[p] = res['identity'] if res['identity']==p else 'villager'
+    ajax.get('/status', oncomplete=cb)
+
+document['join_btn'].bind('click', join)
+document['start_btn'].bind('click', start_game)
+document['chat_send'].bind('click', send_chat)
+
+timer.set_interval(update_status, 2000)
+    </script>
+</body>
+</html>
