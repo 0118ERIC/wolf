@@ -1,2 +1,2 @@
-Flask
-Flask-Session
+Flask==2.3.3
+Flask-Session==0.4.0
