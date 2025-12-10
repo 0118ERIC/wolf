@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+rom flask import Flask, render_template, request, jsonify, session
 from flask_session import Session
 import random
 
@@ -18,12 +18,10 @@ night_result = ""
 
 roles = ["wolf", "seer", "villager", "villager"]
 
-# ----------首頁----------
 @app.route('/')
 def index():
     return render_template("index.html")
 
-# ----------玩家加入----------
 @app.route('/join', methods=['POST'])
 def join():
     name = request.form['name']
@@ -34,7 +32,6 @@ def join():
     session['name'] = name
     return jsonify({"status":"ok"})
 
-# ----------遊戲開始----------
 @app.route('/start', methods=['POST'])
 def start():
     global players, roles, game_phase
@@ -46,7 +43,6 @@ def start():
     game_phase = "night"
     return jsonify({"status":"ok"})
 
-# ----------玩家行動----------
 @app.route('/action', methods=['POST'])
 def action():
     global night_actions, votes
@@ -60,13 +56,13 @@ def action():
             votes[name] = target
     return jsonify({"status":"ok"})
 
-# ----------遊戲狀態----------
 @app.route('/status')
 def status():
     global game_phase, night_actions, votes, night_result
+    required_roles = ["wolf","seer"]
 
-    # 夜晚邏輯
-    if game_phase=="night" and all(p not in alive or p in night_actions for p in alive):
+    # 夜晚邏輯：只等狼或預言家操作
+    if game_phase=="night" and all(p not in alive or (players[p] not in required_roles or p in night_actions) for p in alive):
         night_result=""
         wolf_targets = [t for p,t in night_actions.items() if players[p]=="wolf"]
         if wolf_targets:
@@ -119,13 +115,16 @@ def status():
         "winner":winner
     })
 
-# ----------聊天----------
 @app.route('/chat', methods=['POST'])
 def chat():
     name=session.get('name')
     msg=request.form['msg']
     chat_messages.append(f"{name}: {msg}")
     return jsonify({"status":"ok"})
+
+# 不需要 debug，Render 用 Gunicorn 啟動
+if __name__=="__main__":
+    app.run(host="0.0.0.0")
 
 if __name__=="__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
